@@ -80,8 +80,7 @@
 
 ## 👤 Author
 
-> *(Add your GitHub, LinkedIn, or email here when ready.)*  
-📫 [Contact info here]
+jezierski999@gmail.com
 
 ---
 
