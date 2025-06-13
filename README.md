@@ -70,7 +70,7 @@
 
 ## 📸 Screenshots
 
-![Yield Sign](screenshots/yld.jpg)
+![Yield Sign](screenshots/yld.png)
 
 
 ---
