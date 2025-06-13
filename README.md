@@ -70,7 +70,8 @@
 
 ## 📸 Screenshots
 
-> *(Add screenshots of the camera view, detected signs, alerts, and FPS overlay here.)*
+![Yield Sign](screenshots/yld.jpg)
+
 
 ---
 
