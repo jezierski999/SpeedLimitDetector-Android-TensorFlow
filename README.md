@@ -87,6 +87,3 @@ This is a side project that is **occasionally updated** as new ideas arise. Expe
 
 ---
 
-## 🛣️ Future Ideas (optional)
-
-> *(Here you could list plans like recognizing additional traffic signs, integrating with maps, or adding HUD projection.)*
