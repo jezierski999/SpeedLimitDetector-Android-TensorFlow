@@ -9,6 +9,7 @@ import android.app.AlertDialog
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -16,6 +17,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.media.Image
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -25,11 +27,17 @@ import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RelativeLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -40,6 +48,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.view.marginTop
 import androidx.lifecycle.LifecycleOwner
 import com.example.speedlimitdetector.ml.Ssd
 import com.google.android.gms.tasks.Tasks
@@ -57,10 +66,12 @@ import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Arrays
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 import kotlin.system.exitProcess
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -89,8 +100,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvYld: ImageView
     private lateinit var tvFps: TextView
     private lateinit var buttonSettings: Button
+    private lateinit var layoutTop: LinearLayout
+    private lateinit var layoutDown: LinearLayout
     private lateinit var layoutLeft: LinearLayout
     private lateinit var layoutRight: LinearLayout
+    private lateinit var relativeLayout: RelativeLayout
+    private lateinit var scrollView: ScrollView
     private lateinit var tvX: TextView
     private lateinit var tvY: TextView
     private lateinit var buttonConfidence: Button
@@ -138,7 +153,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var result: Text
     private lateinit var helpImage: InputImage
 
-    @SuppressLint("ClickableViewAccessibility") override fun onCreate(savedInstanceState: Bundle?) {
+    @SuppressLint("ClickableViewAccessibility", "MissingInflatedId") override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         
@@ -155,8 +170,12 @@ class MainActivity : AppCompatActivity() {
         tvYld = findViewById<ImageView>(R.id.tvYld)
         tvFps = findViewById<TextView>(R.id.tvFps)
         buttonSettings = findViewById<Button>(R.id.button_Settings)
+        layoutTop = findViewById<LinearLayout>(R.id.layout_top)
+        layoutDown = findViewById<LinearLayout>(R.id.layoutDown)
         layoutLeft = findViewById<LinearLayout>(R.id.layoutLeft)
         layoutRight = findViewById<LinearLayout>(R.id.layoutRight)
+        relativeLayout = findViewById<RelativeLayout>(R.id.relative_layout)
+        scrollView = findViewById<ScrollView>(R.id.scroll_view)
         tvX = findViewById<TextView>(R.id.tv_x)
         tvY = findViewById<TextView>(R.id.tv_y)
         buttonConfidence = findViewById<Button>(R.id.button_confidence)
@@ -165,13 +184,14 @@ class MainActivity : AppCompatActivity() {
         tvKMH = findViewById<TextView>(R.id.tvKMH)
         tvCamera = findViewById<TextView>(R.id.tv_camera)
 
-
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             initializeCameraAndLocation()
         } else {
             requestCameraAndLocationPermissions()
         }
+
+        adjustLayoutForScreenSize()
 
 
         //--------------------------------------------------------------------------------------Database
@@ -388,23 +408,25 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 cameraProvider.unbindAll()
-
-                try {
-                    Handler(Looper.getMainLooper()).postDelayed({
-
-                        if (::cameraProvider.isInitialized) {
-                            camera = cameraProvider.bindToLifecycle(context as LifecycleOwner, cameraSelector, imageAnalyzer)
-                        } }, 2000)
-
-                    
-
-
-                } catch (exc: Exception) {
-                    Log.e(TAG, "Use case binding failed", exc)
-                }
+                cameraProviderFuture.addListener({
+                    try {
+                        camera = cameraProvider.bindToLifecycle(context as LifecycleOwner, cameraSelector, imageAnalyzer)
+                    } catch (e: ExecutionException) { // No errors need to be handled for this Future.
+                        // This should never be reached.
+                        Log.e("CANER", "Camera provider error: $e")
+                    } catch (e: InterruptedException) {
+                        Log.e("CANER", "Camera provider error: $e")
+                    }
+                }, ContextCompat.getMainExecutor(context))
             }, ContextCompat.getMainExecutor(context))
+
+
+
         }
 
+        fun stopCamera() {
+            cameraProvider.unbindAll()
+        }
 
         /**
          * ImageAnalyzer analyzes camera frames using a TensorFlow Lite model and Google's ML Kit Text Recognition.
@@ -417,8 +439,6 @@ class MainActivity : AppCompatActivity() {
          * - Updates UI with recognized signs or triggers warning sounds if necessary.
          *
          * This analyzer runs on a background thread and posts results to the main thread for UI updates.
-         *
-         * @property listener Callback used to receive the raw camera image if needed (not directly used here).
          */
 
         private inner class ImageAnalyzer(private val listener: (image: Image) -> Unit) : ImageAnalysis.Analyzer {
@@ -514,7 +534,6 @@ class MainActivity : AppCompatActivity() {
 
                         } else {
                             // If the next recognized object is missing
-
                             if (helpList.size >= minDetectionCountThreshold) {
                                 yld = 0
                                 ne = 0
@@ -614,7 +633,7 @@ class MainActivity : AppCompatActivity() {
                     //Updating objects in settings.
                     if (Settings) {
                         mutable = Bitmap.createBitmap(mutable, 0, 0, 224, 160)
-                        mutable = getRoundedCornerBitmap(mutable, 5f)
+                        mutable = getRoundedCornerBitmap(mutable, 10f)
                         imageView.post { imageView.setImageBitmap(mutable) }
                     }
                 }
@@ -718,12 +737,36 @@ class MainActivity : AppCompatActivity() {
         animatorSet.start()
     }
 
+    private fun adjustLayoutForScreenSize() {
+        val metrics = Resources.getSystem().displayMetrics
+        //val screenWidthDp = metrics.widthPixels / (metrics.densityDpi / 160f)
+        val screenHeightDp = metrics.heightPixels / (metrics.densityDpi / 160f)
+
+        scrollView.layoutParams.height = (screenHeightDp * metrics.density).toInt()
+        layoutTop.layoutParams.height = (screenHeightDp * metrics.density / 2).toInt()
+        layoutDown.layoutParams.height = (screenHeightDp * metrics.density / 2).toInt()
+        var layoutParams = relativeLayout.layoutParams as ViewGroup.MarginLayoutParams
+        layoutParams.topMargin = (screenHeightDp * 0.05f * metrics.density).toInt()
+        relativeLayout.layoutParams = layoutParams
+        tvSpeed.textSize = (screenHeightDp * 0.1125).toFloat()
+        tvKMH.textSize = (screenHeightDp * 0.05).toFloat()
+        buttonConfidence.textSize = (screenHeightDp * 0.015).toFloat()
+        buttonSeconds.textSize = (screenHeightDp * 0.015).toFloat()
+        buttonMinDetectionCountThreshold.textSize = (screenHeightDp * 0.0125).toFloat()
+        tvX.textSize = (screenHeightDp * 0.025).toFloat()
+        tvY.textSize = (screenHeightDp * 0.025).toFloat()
+        tvFps.textSize = (screenHeightDp * 0.0175).toFloat()
+        tvCamera.textSize = (screenHeightDp * 0.015).toFloat()
+        buttonSettings.textSize = (screenHeightDp * 0.0225).toFloat()
+        layoutParams = buttonSettings.layoutParams as ViewGroup.MarginLayoutParams
+        layoutParams.bottomMargin = (screenHeightDp * 0.0625f * metrics.density).toInt()
+        buttonSettings.layoutParams = layoutParams
+    }
+
     private fun initializeCameraAndLocation() {
-            coroutineScope.launch(Dispatchers.IO) {
-                cameraHelper = CameraHelper(this@MainActivity)
-            }
-            locationHelper = LocationHelper(this, this, tvKMH)
-            locationHelper.startLocationUpdates()
+        cameraHelper = CameraHelper(this@MainActivity)
+        locationHelper = LocationHelper(this, this, tvKMH)
+        locationHelper.startLocationUpdates()
     }
 
     private fun requestCameraAndLocationPermissions() {
@@ -744,25 +787,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
-
     override fun onStop() {
         locationHelper.stopLocationUpdates()
-
-        coroutineScope.cancel()
+        cameraHelper?.stopCamera()
         super.onStop()
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            finishAffinity()
-            exitProcess(0)
-        }, 300)
     }
 
     override fun onResume() {
         super.onResume()
-        coroutineScope.launch(Dispatchers.IO) {
-            cameraHelper?.startCamera()
-        }
+        cameraHelper?.startCamera()
+        locationHelper.startLocationUpdates()
     }
 
     override fun onDestroy() {
