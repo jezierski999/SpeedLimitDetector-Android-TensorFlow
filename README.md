@@ -53,6 +53,21 @@
 4. **FPS under 10** – On low-end phones, performance may be too slow to be useful.
 5. **Weather & lighting** – Performance drops significantly in rainy weather or when facing direct sunlight.
 
+📷 Camera Position is Crucial
+For best detection accuracy, make sure to position the camera carefully. Poor positioning can lead to unreliable results.
+
+🔧 You can adjust the camera view by swiping on the preview screen in the settings.
+
+✅ Recommended setup:
+
+Position the left edge of the frame so it slightly runs along the edge of the road, but not over it.
+
+In the preview, the road should be barely visible — or not visible at all.
+
+This helps reduce false detections and improves stability.
+
+Taking a few seconds to position the camera properly makes a huge difference in overall performance.
+
 ---
 
 ## 🚀 Getting Started
