@@ -34,16 +34,6 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    fun AndroidResources.() {
-        noCompress += "tflite" // noCompress += "lite" // jeśli też chcesz
-    } // noCompress += "lite" // jeśli też chcesz
-    androidResources
-
-    fun Packaging.() {
-        resources {
-            excludes += setOf("META-INF/INDEX.LIST", "META-INF/DEPENDENCIES")
-        }
-    }
 
     buildFeatures {
         viewBinding=true
