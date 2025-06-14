@@ -72,7 +72,7 @@
 
 <p align="center">
   <img src="screenshots/60.png" width="30%">
-  <img src="screenshots/60.jpg" width="30%">
+  <img src="screenshots/50.png" width="30%">
   <img src="screenshots/yld.png" width="30%">
 </p>
 
