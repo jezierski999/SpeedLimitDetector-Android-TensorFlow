@@ -748,8 +748,10 @@ class MainActivity : AppCompatActivity() {
         var layoutParams = relativeLayout.layoutParams as ViewGroup.MarginLayoutParams
         layoutParams.topMargin = (screenHeightDp * 0.05f * metrics.density).toInt()
         relativeLayout.layoutParams = layoutParams
-        tvSpeed.textSize = (screenHeightDp * 0.1125).toFloat()
-        tvKMH.textSize = (screenHeightDp * 0.05).toFloat()
+        relativeLayout.layoutParams.height = (screenHeightDp * metrics.density * 0.36).toInt()
+        relativeLayout.layoutParams.width = (screenHeightDp * metrics.density * 0.23).toInt()
+        tvSpeed.textSize = (screenHeightDp * 0.105).toFloat()
+        tvKMH.textSize = (screenHeightDp * 0.04).toFloat()
         buttonConfidence.textSize = (screenHeightDp * 0.015).toFloat()
         buttonSeconds.textSize = (screenHeightDp * 0.015).toFloat()
         buttonMinDetectionCountThreshold.textSize = (screenHeightDp * 0.0125).toFloat()
