@@ -57,8 +57,6 @@ For best detection accuracy, make sure to position the camera **carefully**. Poo
 * In the preview, the road should be **barely visible** — or **not visible at all**.
 * Taking a few seconds to position the camera properly makes a **huge difference** in performance.
 
----
-
 ### 🎯 2. **Detection Confidence**
 
 Set a reasonable confidence threshold:
@@ -67,8 +65,6 @@ Set a reasonable confidence threshold:
 * Too low: risk of false positives
 * Too high: risk of missing valid signs
 
----
-
 ### 📊 3. **Number of Signs Processed**
 
 This affects how many objects are tracked per frame:
@@ -76,14 +72,10 @@ This affects how many objects are tracked per frame:
 * **Weaker devices** (low RAM/CPU): set to `1`
 * **Stronger devices**: try `2–5` for better detection coverage
 
----
-
 ### ⏱️ 4. **Performance and FPS**
 
 * If your FPS drops **below 10**, the app may become unusable
 * This typically happens on older or phones
-
----
 
 ### 🌦️ 5. **Weather & Lighting Conditions**
 
