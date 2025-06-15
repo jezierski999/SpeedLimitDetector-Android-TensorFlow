@@ -81,8 +81,7 @@ This affects how many objects are tracked per frame:
 ### ⏱️ 4. **Performance and FPS**
 
 * If your FPS drops **below 10**, the app may become unusable
-* This typically happens on older or low-end phones
-* Reduce resolution or number of detections to improve performance
+* This typically happens on older or phones
 
 ---
 
