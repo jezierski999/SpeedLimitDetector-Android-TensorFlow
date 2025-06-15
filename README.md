@@ -43,30 +43,55 @@
 
 ---
 
-## 🧠 User Tips & Configuration
+## 📌 Tips for Best Results
 
-1. **Camera position matters** – Adjust it by swiping on the preview screen in settings.
-2. **Detection confidence** – Best results are usually between **70% and 85%**.
-3. **Number of signs processed** – Depends on your device:
-   - Weaker devices: use `1`
-   - Stronger devices: use `2–5`
-4. **FPS under 10** – On low-end phones, performance may be too slow to be useful.
-5. **Weather & lighting** – Performance drops significantly in rainy weather or when facing direct sunlight.
+### 📷 1. **Camera Position is Crucial**
 
-📷 Camera Position is Crucial
-For best detection accuracy, make sure to position the camera carefully. Poor positioning can lead to unreliable results.
+For best detection accuracy, make sure to position the camera **carefully**. Poor positioning can lead to unreliable or missed detections.
 
-🔧 You can adjust the camera view by swiping on the preview screen in the settings.
+🔧 You can **adjust the camera view** by swiping on the preview screen in the settings.
 
-✅ Recommended setup:
+✅ **Recommended setup**:
 
-Position the left edge of the frame so it slightly runs along the edge of the road, but not over it.
+* Position the **left edge of the frame** so it slightly runs **along the edge of the road**, but **not over it**.
+* In the preview, the road should be **barely visible** — or **not visible at all**.
+* Taking a few seconds to position the camera properly makes a **huge difference** in performance.
 
-In the preview, the road should be barely visible — or not visible at all.
+---
 
-This helps reduce false detections and improves stability.
+### 🎯 2. **Detection Confidence**
 
-Taking a few seconds to position the camera properly makes a huge difference in overall performance.
+Set a reasonable confidence threshold:
+
+* Best results are usually between **70% and 85%**
+* Too low: risk of false positives
+* Too high: risk of missing valid signs
+
+---
+
+### 📊 3. **Number of Signs Processed**
+
+This affects how many objects are tracked per frame:
+
+* **Weaker devices** (low RAM/CPU): set to `1`
+* **Stronger devices**: try `2–5` for better detection coverage
+
+---
+
+### ⏱️ 4. **Performance and FPS**
+
+* If your FPS drops **below 10**, the app may become unusable
+* This typically happens on older or low-end phones
+* Reduce resolution or number of detections to improve performance
+
+---
+
+### 🌦️ 5. **Weather & Lighting Conditions**
+
+Detection accuracy is affected by environment:
+
+* **Rain**, **fog**, or **direct sunlight** can severely reduce performance
+* For best results, use in **clear daylight** or good lighting conditions
 
 ---
 
