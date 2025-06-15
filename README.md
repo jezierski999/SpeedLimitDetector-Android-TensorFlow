@@ -112,7 +112,6 @@ Detection accuracy is affected by environment:
 ## 👤 Author
 
 jezierski999@gmail.com
-
 ---
 
 ## 🧪 Project Status
@@ -120,4 +119,5 @@ jezierski999@gmail.com
 This is a side project that is **occasionally updated** as new ideas arise. Expect occasional improvements and optimizations.
 
 ---
+This project is not licensed for reuse. Please contact the author if you'd like to use it.
 
