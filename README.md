@@ -107,6 +107,9 @@ Detection accuracy is affected by environment:
   <img src="screenshots/yld.png" width="30%">
 </p>
 
+<p align="center">
+  <img src="screenshots/yld.gif" width="50%">
+</p>
 ---
 
 ## 👤 Author
