@@ -44,14 +44,15 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import com.example.speedlimitdetector.ml.Ssd
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
@@ -60,7 +61,6 @@ import java.nio.ByteOrder
 import java.util.Arrays
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
 
@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var context: Context
     private var cameraHelper: CameraHelper? = null
     private val PERMISSIONS_REQUEST_CODE = 225
-    private val coroutineScope = CoroutineScope(Dispatchers.Default)
+//    private val coroutineScope = CoroutineScope(Dispatchers.Default)
     private lateinit var model: Ssd
     private lateinit var locationHelper: LocationHelper
     private lateinit var camera: Camera
@@ -89,6 +89,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var iv8: ImageView
     private lateinit var tvSpeed: TextView
     private lateinit var tvYld: ImageView
+    private lateinit var tvWait: TextView
     private lateinit var tvFps: TextView
     private lateinit var buttonSettings: Button
     private lateinit var layoutTop: LinearLayout
@@ -143,28 +144,33 @@ class MainActivity : AppCompatActivity() {
     private val helpArray = IntArray(12)
     private lateinit var result: Text
     private lateinit var helpImage: InputImage
+    private val arrowFrames = listOf("⠁", "  ⠈", "    ⠂", "    ⠄", "  ⡀", "⡀", "⠄  ", "⠂  ")
+    private var arrowIndex = 0
+    private val arrowHandler = Handler(Looper.getMainLooper())
+    private lateinit var arrowRunnable: Runnable
 
     @SuppressLint("ClickableViewAccessibility", "MissingInflatedId") override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        
-        imageView = findViewById<ImageView>(R.id.imageView)
-        iv1 = findViewById<ImageView>(R.id.iv1)
-        iv2 = findViewById<ImageView>(R.id.iv2)
-        iv3 = findViewById<ImageView>(R.id.iv3)
-        iv4 = findViewById<ImageView>(R.id.iv4)
-        iv5 = findViewById<ImageView>(R.id.iv5)
-        iv6 = findViewById<ImageView>(R.id.iv6)
-        iv7 = findViewById<ImageView>(R.id.iv7)
-        iv8 = findViewById<ImageView>(R.id.iv8)
-        tvSpeed = findViewById<TextView>(R.id.tvSpeed)
-        tvYld = findViewById<ImageView>(R.id.tvYld)
-        tvFps = findViewById<TextView>(R.id.tvFps)
+
+        imageView = findViewById<ImageView>(R.id.image_view)
+        iv1 = findViewById<ImageView>(R.id.iv_1)
+        iv2 = findViewById<ImageView>(R.id.iv_2)
+        iv3 = findViewById<ImageView>(R.id.iv_3)
+        iv4 = findViewById<ImageView>(R.id.iv_4)
+        iv5 = findViewById<ImageView>(R.id.iv_5)
+        iv6 = findViewById<ImageView>(R.id.iv_6)
+        iv7 = findViewById<ImageView>(R.id.iv_7)
+        iv8 = findViewById<ImageView>(R.id.iv_8)
+        tvSpeed = findViewById<TextView>(R.id.tv_speed)
+        tvYld = findViewById<ImageView>(R.id.tv_yld)
+        tvWait = findViewById<TextView>(R.id.tv_wait)
+        tvFps = findViewById<TextView>(R.id.tv_fps)
         buttonSettings = findViewById<Button>(R.id.button_Settings)
         layoutTop = findViewById<LinearLayout>(R.id.layout_top)
-        layoutDown = findViewById<LinearLayout>(R.id.layoutDown)
-        layoutLeft = findViewById<LinearLayout>(R.id.layoutLeft)
-        layoutRight = findViewById<LinearLayout>(R.id.layoutRight)
+        layoutDown = findViewById<LinearLayout>(R.id.layout_down)
+        layoutLeft = findViewById<LinearLayout>(R.id.layout_left)
+        layoutRight = findViewById<LinearLayout>(R.id.layout_right)
         relativeLayout = findViewById<RelativeLayout>(R.id.relative_layout)
         scrollView = findViewById<ScrollView>(R.id.scroll_view)
         tvX = findViewById<TextView>(R.id.tv_x)
@@ -172,8 +178,9 @@ class MainActivity : AppCompatActivity() {
         buttonConfidence = findViewById<Button>(R.id.button_confidence)
         buttonSeconds = findViewById<Button>(R.id.button_seconds)
         buttonMinDetectionCountThreshold = findViewById<Button>(R.id.button_minDetectionCountThreshold)
-        tvKMH = findViewById<TextView>(R.id.tvKMH)
+        tvKMH = findViewById<TextView>(R.id.tv_kmh)
         tvCamera = findViewById<TextView>(R.id.tv_camera)
+
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -207,7 +214,6 @@ class MainActivity : AppCompatActivity() {
             seconds = db.getValueById(4).toInt()
             minDetectionCountThreshold = db.getValueById(5).toInt()
         }
-
 
         buttonSeconds.text = "Duration:\n${seconds.toString()} s"
         buttonConfidence.text = "Confidence:\n${(confidence * 100).toInt().toString()} %"
@@ -436,6 +442,7 @@ class MainActivity : AppCompatActivity() {
 
             val handler = Handler()
             private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            var pomocnicza = true
 
             @SuppressLint("SetTextI18n") override fun analyze(imageProxy: ImageProxy) {
                 bitmap = BitmapUtils.getBitmap(imageProxy)!!
@@ -466,8 +473,6 @@ class MainActivity : AppCompatActivity() {
 
                     mutable = bitmap.copy(Bitmap.Config.ARGB_8888, true)
 
-
-
                     maxIndex = -1
                     maxScore = Float.MIN_VALUE
                     for (index in scores.indices) {
@@ -477,146 +482,161 @@ class MainActivity : AppCompatActivity() {
                             maxScore = fl
                         }
                     }
+                    if(pomocnicza) {
+                        if (maxIndex != -1) {
+                            if (scores[maxIndex] > confidence) {
+                                x = maxIndex * 4
+                                fl = scores[maxIndex]
 
-                    if (maxIndex != -1) {
-                        if (scores[maxIndex] > confidence) {
-                            x = maxIndex * 4
-                            fl = scores[maxIndex]
-
-                            if (Settings) {
-
-                                // If settings mode is enabled, draw a bounding box and label around the detected object on the bitmap.
-                                canvas = Canvas(mutable)
-                                paint = Paint()
-                                paint.textSize = 10f
-                                paint.strokeWidth = 3f
-
-                                paint.color = colors[maxIndex]
-                                paint.style = Paint.Style.STROKE
-                                canvas.drawRoundRect(locations[x + 1] * 224, locations[x] * 224, locations[x + 3] * 224, locations[x + 2] * 224, 5f, 5f, paint)
-                                paint.style = Paint.Style.FILL
-                                canvas.drawText(labels[classes[maxIndex].toInt()] + " " + (fl * 100).toInt().toString() + "%", locations[x + 1] * 224, locations[x] * 224 - 3, paint)
-                            }
-
-                            // Extract the detected object's region from the image, resize and crop it, then store it for later recognition or display.
-                            x1 = (locations[x + 1] * 224).toInt()
-                            y1 = (locations[x] * 224).toInt()
-                            w1 = ((locations[x + 3] * 224) - (locations[x + 1] * 224).toInt()).toInt()
-                            h1 = ((locations[x + 2] * 224) - (locations[x] * 224)).toInt()
-
-                            if (x1 < 0) x1 = 0
-                            if (y1 < 0) y1 = 0
-                            if (x1 + w1 > bitmap.width) w1 = bitmap.width - x1
-                            if (y1 + h1 > bitmap.height) h1 = bitmap.height - y1
-
-                            if (w1 > 0 && h1 > 0) {
-                                helpMutable = Bitmap.createBitmap(bitmap, x1, y1, w1, h1)
-                                helpMutable = Bitmap.createScaledBitmap(helpMutable, 120, 120, true)
-                                helpMutable = Bitmap.createBitmap(helpMutable, 25, 25, 80, 70)
-
-                                helpList.add(helpMutable)
-
-                                helpClassList.add(labels[classes[maxIndex].toInt()])
                                 if (Settings) {
-                                    shiftImageHistory()
-                                    iv1.post { iv1.setImageBitmap(helpMutable) }
-                                }
-                            }
 
-                        } else {
-                            // If the next recognized object is missing
-                            if (helpList.size >= minDetectionCountThreshold) {
-                                yld = 0
-                                ne = 0
+                                    // If settings mode is enabled, draw a bounding box and label around the detected object on the bitmap.
+                                    canvas = Canvas(mutable)
+                                    paint = Paint()
+                                    paint.textSize = 10f
+                                    paint.strokeWidth = 3f
 
-                                for (i in helpClassList) {
-                                    if (i == "u") yld++
-                                    else ne++
+                                    paint.color = colors[maxIndex]
+                                    paint.style = Paint.Style.STROKE
+                                    canvas.drawRoundRect(locations[x + 1] * 224, locations[x] * 224, locations[x + 3] * 224, locations[x + 2] * 224, 5f, 5f, paint)
+                                    paint.style = Paint.Style.FILL
+                                    canvas.drawText(labels[classes[maxIndex].toInt()] + " " + (fl * 100).toInt().toString() + "%", locations[x + 1] * 224, locations[x] * 224 - 3, paint)
                                 }
 
-                                //Displaying the yield sign
-                                if (yld > ne && helpList.size > 2) {
-                                    tvYld.post { //
-                                        tvSpeed.visibility = View.INVISIBLE
-                                        tvYld.visibility = View.VISIBLE
-                                        beep.start()
-                                        handler.postDelayed({
-                                            tvYld.visibility = View.INVISIBLE
-                                        }, (seconds.toLong() * 1000))
-                                    }
+                                // Extract the detected object's region from the image, resize and crop it, then store it for later recognition or display.
+                                x1 = (locations[x + 1] * 224).toInt()
+                                y1 = (locations[x] * 224).toInt()
+                                w1 = ((locations[x + 3] * 224) - (locations[x + 1] * 224).toInt()).toInt()
+                                h1 = ((locations[x + 2] * 224) - (locations[x] * 224)).toInt()
 
-                                    helpList.clear()
-                                    helpClassList.clear()
+                                if (x1 < 0) x1 = 0
+                                if (y1 < 0) y1 = 0
+                                if (x1 + w1 > bitmap.width) w1 = bitmap.width - x1
+                                if (y1 + h1 > bitmap.height) h1 = bitmap.height - y1
+
+                                if (w1 > 0 && h1 > 0) {
+                                    helpMutable = Bitmap.createBitmap(bitmap, x1, y1, w1, h1)
+                                    helpMutable = Bitmap.createScaledBitmap(helpMutable, 48, 48, true)
+                                    helpMutable = Bitmap.createBitmap(helpMutable, 9, 9,32,32)
+                                    helpMutable = getRoundedCornerBitmap(helpMutable, 10f)
+
+                                    helpList.add(helpMutable)
+
+                                    helpClassList.add(labels[classes[maxIndex].toInt()])
+                                    if (Settings) {
+                                        shiftImageHistory()
+                                        iv1.post { iv1.setImageBitmap(helpMutable) }
+                                    }
                                 }
 
-                                // Displaying the speed limit sign
-                                else {
-                                    Arrays.fill(helpArray, 0)
+                            } else { // If the next recognized object is missing
+                                if (helpList.size >= minDetectionCountThreshold) {
+                                    yld = 0
+                                    ne = 0
 
-                                    //Performing text recognition on each object sequentially and saving results to helpArray.
-                                    for (i in helpList) {
-                                        rt = ""
-                                        helpImage = InputImage.fromBitmap(i, 0)
-
-                                        try {
-                                            val textTask = recognizer.process(helpImage)
-                                            result = Tasks.await(textTask, 500L, TimeUnit.MILLISECONDS)
-                                            rt = result.text
-                                        } catch (e: Exception) {
-                                            Log.e("DEBUG", "Task exc: ${e.message}")
-                                        } finally {
-                                        }
-                                        if (rt.contains("100")) helpArray[8]++
-                                        else if (rt.contains("110")) helpArray[9]++
-                                        else if (rt.contains("120")) helpArray[10]++
-                                        else if (rt.contains("130")) helpArray[11]++
-                                        else if (rt.contains("20") || rt.contains("Z0") || rt.contains("z0") || rt.contains("0Z") || rt.contains("0z") || rt.contains("2o") || rt.contains("2O") || rt.contains(
-                                                "2o")) helpArray[0]++
-                                        else if (rt.contains("30")) helpArray[1]++
-                                        else if (rt.contains("40")) helpArray[2]++
-                                        else if (rt.contains("50") || rt.contains("S0") || rt.contains("s0") || rt.contains("0S") || rt.contains("0s") || rt.contains("5o") || rt.contains("5O") || rt.contains(
-                                                "5o")) helpArray[3]++
-                                        else if (rt.contains("60") || rt.contains("6O") || rt.contains("09") || rt.contains("O9") || rt.contains("o9") || rt.contains("6o")) helpArray[4]++
-                                        else if (rt.contains("70")) helpArray[5]++
-                                        else if (rt.contains("80") || rt.contains("08") || rt.contains("8o") || rt.contains("8O") || rt.contains("o8") || rt.contains("O8")) helpArray[6]++
-                                        else if (rt.contains("90") || rt.contains("9O") || rt.contains("06") || rt.contains("O6") || rt.contains("o6") || rt.contains("9o")) helpArray[7]++
+                                    for (i in helpClassList) {
+                                        if (i == "u") yld++
+                                        else ne++
                                     }
 
-                                    maksimum = helpArray[0]
-                                    indeksMaksimum = 0
-
-                                    //Finding the maximum value.
-                                    for (i in 1 until helpArray.size) {
-                                        if (helpArray[i] > maksimum) {
-                                            maksimum = helpArray[i]
-                                            indeksMaksimum = i
-                                        }
-                                    }
-
-                                    //Displaying the sign.
-                                    if (helpArray[indeksMaksimum] != 0) {
-                                        speed = locationHelper.takespeed()
-
-                                        if (speedList[indeksMaksimum].toDouble() < speed) {
-                                            tvSpeed.post { beep.start() }
-                                        }
-                                        tvSpeed.post {
-                                            tvSpeed.text = speedList[indeksMaksimum]
-                                            tvYld.visibility = View.INVISIBLE
-                                            tvSpeed.visibility = View.VISIBLE
-
+                                    //Displaying the yield sign
+                                    if (yld > ne && helpList.size > 2) {
+                                        tvYld.post { //
+                                            tvSpeed.visibility = View.INVISIBLE
+                                            tvYld.visibility = View.VISIBLE
+                                            beep.start()
                                             handler.postDelayed({
-                                                tvSpeed.visibility = View.INVISIBLE
+                                                tvYld.visibility = View.INVISIBLE
                                             }, (seconds.toLong() * 1000))
                                         }
+
+                                        helpList.clear()
+                                        helpClassList.clear()
                                     }
+
+                                    // Displaying the speed limit sign
+                                    else {
+                                        pomocnicza = false
+
+                                        lifecycleScope.launch(Dispatchers.IO) {
+                                            runOnUiThread {
+                                                tvWait.visibility = View.VISIBLE
+                                                startArrowAnimation(tvWait)
+                                            }
+                                            Arrays.fill(helpArray, 0)
+
+                                            //Performing text recognition on each object sequentially and saving results to helpArray.
+                                            for (i in helpList.take(5)) {
+                                                rt = ""
+                                                helpImage = InputImage.fromBitmap(i, 0)
+
+                                                try {
+                                                    val textTask = recognizer.process(helpImage)
+                                                    result = Tasks.await(textTask)
+
+                                                    rt = result.text
+                                                } catch (e: Exception) {
+                                                    Log.e("DEBUG", "Task exc: ${e.message}")
+                                                } finally {
+                                                }
+                                                if (rt.contains("100")) helpArray[8]++
+                                                else if (rt.contains("110")) helpArray[9]++
+                                                else if (rt.contains("120")) helpArray[10]++
+                                                else if (rt.contains("130")) helpArray[11]++
+                                                else if (rt.contains("20") || rt.contains("Z0") || rt.contains("z0") || rt.contains("0Z") || rt.contains("0z") || rt.contains("2o") || rt.contains("2O") || rt.contains(
+                                                        "2o")) helpArray[0]++
+                                                else if (rt.contains("30")) helpArray[1]++
+                                                else if (rt.contains("40")) helpArray[2]++
+                                                else if (rt.contains("50") || rt.contains("S0") || rt.contains("s0") || rt.contains("0S") || rt.contains("0s") || rt.contains("5o") || rt.contains("5O") || rt.contains(
+                                                        "5o")) helpArray[3]++
+                                                else if (rt.contains("60") || rt.contains("6O") || rt.contains("09") || rt.contains("O9") || rt.contains("o9") || rt.contains("6o")) helpArray[4]++
+                                                else if (rt.contains("70")) helpArray[5]++
+                                                else if (rt.contains("80") || rt.contains("08") || rt.contains("8o") || rt.contains("8O") || rt.contains("o8") || rt.contains("O8")) helpArray[6]++
+                                                else if (rt.contains("90") || rt.contains("9O") || rt.contains("06") || rt.contains("O6") || rt.contains("o6") || rt.contains("9o")) helpArray[7]++
+                                            }
+
+                                            maksimum = helpArray[0]
+                                            indeksMaksimum = 0
+
+                                            //Finding the maximum value.
+                                            for (i in 1 until helpArray.size) {
+                                                if (helpArray[i] > maksimum) {
+                                                    maksimum = helpArray[i]
+                                                    indeksMaksimum = i
+                                                }
+                                            }
+
+                                            //Displaying the sign.
+                                            if (helpArray[indeksMaksimum] != 0) {
+                                                speed = locationHelper.takespeed()
+
+                                                if (speedList[indeksMaksimum].toDouble() < speed) {
+                                                    tvSpeed.post { beep.start() }
+                                                }
+                                                tvSpeed.post {
+                                                    tvSpeed.setTextColor(ContextCompat.getColor(context, R.color.black))
+                                                    tvSpeed.text = speedList[indeksMaksimum]
+                                                    tvYld.visibility = View.INVISIBLE
+                                                    tvSpeed.visibility = View.VISIBLE
+
+                                                    handler.postDelayed({
+                                                        tvSpeed.visibility = View.INVISIBLE
+                                                    }, (seconds.toLong() * 1000))
+                                                }
+                                            }
+                                            runOnUiThread {
+                                                tvWait.visibility = View.INVISIBLE
+                                                stopArrowAnimation(tvWait)
+                                            }
+                                            helpList.clear()
+                                            helpClassList.clear()
+                                            pomocnicza = true
+                                        }
+                                    }
+                                } else {
                                     helpList.clear()
                                     helpClassList.clear()
                                 }
-
-                            } else {
-                                helpList.clear()
-                                helpClassList.clear()
                             }
                         }
                     }
@@ -671,8 +691,7 @@ class MainActivity : AppCompatActivity() {
 
         return outputBitmap
     }
-
-
+    
     fun bitmap_to_bytebuffer(bitmap: Bitmap): ByteBuffer {
 
         var pixel: Int = 0
@@ -724,7 +743,6 @@ class MainActivity : AppCompatActivity() {
             scaleY,
             alphaAnimator
         )
-
         animatorSet.start()
     }
 
@@ -742,6 +760,7 @@ class MainActivity : AppCompatActivity() {
         relativeLayout.layoutParams.height = (screenHeightDp * metrics.density * 0.36).toInt()
         relativeLayout.layoutParams.width = (screenHeightDp * metrics.density * 0.23).toInt()
         tvSpeed.textSize = (screenHeightDp * 0.105).toFloat()
+        tvWait.textSize = (screenHeightDp * 0.03).toFloat()
         tvKMH.textSize = (screenHeightDp * 0.04).toFloat()
         buttonConfidence.textSize = (screenHeightDp * 0.015).toFloat()
         buttonSeconds.textSize = (screenHeightDp * 0.015).toFloat()
@@ -754,6 +773,23 @@ class MainActivity : AppCompatActivity() {
         layoutParams = buttonSettings.layoutParams as ViewGroup.MarginLayoutParams
         layoutParams.bottomMargin = (screenHeightDp * 0.0625f * metrics.density).toInt()
         buttonSettings.layoutParams = layoutParams
+    }
+
+    fun startArrowAnimation(textView: TextView) {
+        arrowRunnable = object : Runnable {
+            override fun run() {
+                textView.text = arrowFrames[arrowIndex % arrowFrames.size]
+                arrowIndex++
+                arrowHandler.postDelayed(this, 0,30)
+            }
+        }
+        arrowHandler.post(arrowRunnable)
+    }
+
+    fun stopArrowAnimation(textView: TextView) {
+        arrowHandler.removeCallbacks(arrowRunnable)
+        textView.text = ""
+        arrowIndex = 0
     }
 
     private fun initializeCameraAndLocation() {
