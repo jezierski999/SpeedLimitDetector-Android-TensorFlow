@@ -116,7 +116,7 @@ Detection accuracy is affected by environment:
 
 ## 🎥 See the app in action
 
-[![YouTube Video](https://img.youtube.com/vi/J2x6BXCbJxE/hqdefault.jpg)](https://youtu.be/J2x6BXCbJxE)]
+[![YouTube Video](https://img.youtube.com/vi/J2x6BXCbJxE/hqdefault.jpg)](https://youtu.be/J2x6BXCbJxE)
 
 
 ---
