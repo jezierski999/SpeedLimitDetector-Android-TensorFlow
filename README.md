@@ -118,7 +118,7 @@ Detection accuracy is affected by environment:
 
 <div align="center">
   <a href="https://youtu.be/J2x6BXCbJxE">
-    <img src="https://img.youtube.com/vi/J2x6BXCbJxE/hqdefault.jpg" alt="YouTube Video" width="480">
+    <img src="screenshots/yt.png" alt="YouTube Video" width="480">
   </a>
 </div>
 
