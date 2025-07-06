@@ -116,7 +116,11 @@ Detection accuracy is affected by environment:
 
 ## 🎥 See the app in action
 
-[![YouTube Video](https://img.youtube.com/vi/J2x6BXCbJxE/hqdefault.jpg)](https://youtu.be/J2x6BXCbJxE)
+<div align="center">
+  <a href="https://youtu.be/J2x6BXCbJxE">
+    <img src="https://img.youtube.com/vi/J2x6BXCbJxE/hqdefault.jpg" alt="YouTube Video" width="480">
+  </a>
+</div>
 
 
 ---
