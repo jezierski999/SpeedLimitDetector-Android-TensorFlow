@@ -113,6 +113,7 @@ Detection accuracy is affected by environment:
 </p>
 ---
 ## 🎥 See the app in action
+
 [![YouTube Video](https://img.shields.io/badge/Watch_on-YouTube-red?logo=youtube)](https://youtu.be/J2x6BXCbJxE)
 
 ## 👤 Author
