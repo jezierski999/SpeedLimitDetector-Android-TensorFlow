@@ -127,7 +127,7 @@ Detection accuracy is affected by environment:
 
 ## 📦 Download APK
 
-<p align="center">
+<p align="left">
   <a href="https://github.com/jezierski999/SpeedLimitDetector-Android-TensorFlow/releases/download/v1.0.0/SpeedLimitDetector.apk">
     <img src="https://img.shields.io/badge/Download-APK-blue?style=for-the-badge&logo=android" alt="Download SpeedLimitDetector.apk"/>
   </a>
