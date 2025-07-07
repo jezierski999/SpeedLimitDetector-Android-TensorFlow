@@ -125,7 +125,7 @@ Detection accuracy is affected by environment:
 
 ---
 
-## 📦 Download APK
+## 📦 Download
 
 <p align="left">
   <a href="https://github.com/jezierski999/SpeedLimitDetector-Android-TensorFlow/releases/download/v1.0.0/SpeedLimitDetector.apk">
@@ -138,6 +138,7 @@ Detection accuracy is affected by environment:
 ## 👤 Author
 
 jezierski999@gmail.com
+
 ---
 
 ## 🧪 Project Status
